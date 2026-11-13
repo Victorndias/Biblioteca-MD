@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Pesquise livros no catálogo da Biblioteca Municipal Digital.">
+  <title>Catálogo | Biblioteca Municipal Digital</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body data-page="catalog">
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="index.html" aria-label="Biblioteca Municipal Digital - página inicial"><span class="brand-mark" aria-hidden="true">B</span><span><strong>Biblioteca Municipal</strong><small>Fábrica do Conhecimento</small></span></a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-expanded="false">☰</button>
+      <nav class="main-nav" id="mainNav" aria-label="Navegação principal"><a href="index.html">Início</a><a class="active" href="catalogo.html">Catálogo</a><a href="index.html#como-funciona">Como funciona</a></nav>
+      <a class="nav-cta" href="index.html">Página inicial <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main class="catalog-main">
+    <section class="catalog-intro"><div class="container"><span class="eyebrow">Descubra sua próxima leitura</span><h1>Catálogo de livros</h1><p>Pesquise o acervo e confira quais obras têm versão digital disponível.</p></div></section>
+    <section class="container catalog-content">
+      <form class="catalog-toolbar" id="catalogSearchForm">
+        <div class="catalog-search-wrap"><span aria-hidden="true" class="search-icon">⌕</span><label class="sr-only" for="catalogQuery">Pesquisar livros</label><input id="catalogQuery" type="search" placeholder="Buscar por título, autor ou assunto..."></div>
+        <label class="sr-only" for="categoryFilter">Filtrar por categoria</label>
+        <select id="categoryFilter"><option value="all">Todas as categorias</option></select>
+        <label class="sr-only" for="availabilityFilter">Filtrar por disponibilidade</label>
+        <select id="availabilityFilter"><option value="all">Todo o acervo</option><option value="digital">Com versão digital</option><option value="physical">Acervo físico</option></select>
+        <button class="button button-primary" type="submit">Pesquisar</button>
+      </form>
+      <div class="results-line"><p id="resultsCount" aria-live="polite">Carregando acervo...</p><button class="clear-filters" id="clearFilters" type="button">Limpar filtros</button></div>
+      <div class="book-grid catalog-book-grid" id="catalogBooks" aria-live="polite"></div>
+      <div class="empty-state hidden" id="emptyState"><span aria-hidden="true">⌕</span><h2>Nenhum livro encontrado</h2><p>Tente outro termo ou remova algum filtro.</p></div>
+      <p class="prototype-note"><strong>Observação:</strong> os títulos exibidos são dados de demonstração para testar a interface. O catálogo real deverá ser validado com a Biblioteca Municipal.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer"><div class="container footer-inner"><a href="index.html">Voltar ao início</a></div><div class="container footer-disclaimer">A leitura online deverá ser habilitada apenas para obras em domínio público ou devidamente licenciadas.</div></footer>
+</body>
+</html>
