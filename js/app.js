@@ -27,13 +27,12 @@ const books = [
     coverColor: '#235946',
     description: 'Uma narrativa clássica que explora os limites entre razão, ciência e sociedade.',
     contentHeading: 'Uma história de Itaguaí',
-    content:  [
+    content: [
       'Este espaço demonstra como será a experiência de leitura digital da Biblioteca Municipal. O conteúdo mostrado nesta versão é apenas ilustrativo e não substitui a edição integral da obra.',
       'Imagine uma pequena cidade onde as pessoas discutem novidades, compartilham histórias e tentam compreender o mundo ao redor. A biblioteca aproxima leitores dessas narrativas e oferece um lugar para descobrir novas ideias.',
       'Na versão definitiva, o leitor poderá apresentar o arquivo autorizado da obra, com controles de navegação e opções de leitura adequadas ao dispositivo utilizado.'
     ]
   },
-  
   {
     id: 'contos-da-cidade',
     title: 'Contos da nossa cidade',
@@ -75,6 +74,7 @@ const books = [
     category: 'Ficção',
     year: 1943,
     digitalAvailable: false,
+    physicalLoanAvailable: true,
     rightsLabel: 'Disponibilidade digital a confirmar',
     coverColor: '#386c85',
     description: 'Uma narrativa conhecida por suas reflexões sobre amizade, afeto e responsabilidade.',
@@ -88,6 +88,7 @@ const books = [
     category: 'Infantojuvenil',
     year: 2024,
     digitalAvailable: false,
+    physicalLoanAvailable: true,
     rightsLabel: 'Acervo físico — exemplo',
     coverColor: '#6a6d9a',
     description: 'Título de exemplo para mostrar livros sem leitura digital habilitada.',
@@ -101,6 +102,7 @@ const books = [
     category: 'Poesia',
     year: 2023,
     digitalAvailable: false,
+    physicalLoanAvailable: true,
     rightsLabel: 'Acervo físico — exemplo',
     coverColor: '#7c684e',
     description: 'Exemplo de item do catálogo sem versão digital acessível nesta etapa.',
@@ -114,6 +116,7 @@ const books = [
     category: 'Estudos',
     year: 2022,
     digitalAvailable: false,
+    physicalLoanAvailable: true,
     rightsLabel: 'Acervo físico — exemplo',
     coverColor: '#4a786d',
     description: 'Livro de exemplo para estudantes e para a demonstração dos filtros do catálogo.',
@@ -132,12 +135,15 @@ function createBookCard(book) {
   const availability = book.digitalAvailable
     ? '<span class="status-pill">Leitura digital</span>'
     : '<span class="status-pill physical">Acervo físico</span>';
-  const action = book.digitalAvailable
-? `<a class="btn-ler" href="leitor.html?livro=${encodeURIComponent(book.id)}">
-    <span>Ler online</span>
-    <span aria-hidden="true">→</span>
-  </a>`
-  : '<span class="small-link disabled" title="A leitura online não está habilitada neste protótipo">Somente consulta</span>';
+
+  let action;
+  if (book.digitalAvailable) {
+    action = `<a class="small-link" href="leitor.html?livro=${encodeURIComponent(book.id)}">Ler online →</a>`;
+  } else if (book.physicalLoanAvailable) {
+    action = `<a class="small-link loan-link" href="solicitar-emprestimo.html?livro=${encodeURIComponent(book.id)}">Solicitar empréstimo</a>`;
+  } else {
+    action = '<span class="small-link disabled">Indisponível</span>';
+  }
 
   return `
     <article class="book-card">
@@ -272,27 +278,8 @@ function setupReaderPage() {
   statusElement.textContent = book.digitalAvailable ? book.rightsLabel : 'Leitura online indisponível';
   headingElement.textContent = book.contentHeading || book.title;
 
-  if (book.digitalAvailable && book.pdfUrl) {
-  contentElement.innerHTML = `
-  <div class="pdf-container">
-    <iframe
-      class="pdf-viewer"
-      src="${escapeHtml(book.pdfUrl)}"
-      title="Leitura em PDF: ${escapeHtml(book.title)}">
-    </iframe>
-
-    <img
-    class="pdf-watermark"
-    src="img/bibliotecaa.png"
-    alt=""
-    aria-hidden="true">
-    </div>
-  `;
-} else if (book.digitalAvailable) {
-  contentElement.innerHTML = book.content
-    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
-    .join('');
-
+  if (book.digitalAvailable) {
+    contentElement.innerHTML = book.content.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('');
   } else {
     notice.classList.add('hidden');
     shell.innerHTML = `
@@ -308,11 +295,6 @@ function setupReaderPage() {
   const increase = document.getElementById('increaseFont');
   const decrease = document.getElementById('decreaseFont');
   const toggleTheme = document.getElementById('toggleTheme');
-  if (book.pdfUrl) {
-  increase.hidden = true;
-  decrease.hidden = true;
-  toggleTheme.hidden = true;
-}
   let fontSize = 17;
 
   increase.addEventListener('click', () => {
@@ -330,9 +312,57 @@ function setupReaderPage() {
   });
 }
 
+
+
+function setupLoanRequestPage() {
+  const form = document.getElementById('loanRequestForm');
+  if (!form) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const bookId = params.get('livro');
+  const book = books.find((item) => item.id === bookId);
+  const bookSummary = document.getElementById('loanBookSummary');
+  const invalidMessage = document.getElementById('loanInvalidBook');
+  const formPanel = document.getElementById('loanFormPanel');
+  const successPanel = document.getElementById('loanSuccess');
+  const titleInput = document.getElementById('loanBookId');
+
+  if (!book || book.digitalAvailable || !book.physicalLoanAvailable) {
+    formPanel.classList.add('hidden');
+    invalidMessage.classList.remove('hidden');
+    return;
+  }
+
+  titleInput.value = book.id;
+  document.getElementById('loanBookTitle').textContent = book.title;
+  document.getElementById('loanBookAuthor').textContent = `${book.author} · ${book.year}`;
+  document.getElementById('loanBookCategory').textContent = book.category;
+  document.getElementById('loanBookCoverTitle').textContent = book.title;
+  document.title = `Solicitar empréstimo | ${book.title}`;
+  bookSummary.classList.remove('hidden');
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+
+    // Apenas simula o resultado visual. Nenhum dado pessoal é salvo ou enviado.
+    const protocol = `DEMO-${Date.now().toString().slice(-8)}`;
+
+    document.getElementById('loanProtocol').textContent = protocol;
+    document.getElementById('loanSuccessTitle').textContent = book.title;
+    document.getElementById('loanStorageNotice').textContent =
+      'Este resultado é apenas uma simulação do frontend. Os dados não foram enviados à biblioteca nem armazenados. Para receber solicitações reais, será necessário conectar esta página a um backend.';
+
+    formPanel.classList.add('hidden');
+    successPanel.classList.remove('hidden');
+    successPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupMobileMenu();
   setupHomePage();
   setupCatalogPage();
   setupReaderPage();
+  setupLoanRequestPage();
 });
