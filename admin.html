@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Área demonstrativa de administração da Biblioteca Municipal Digital.">
+  <title>Área do Bibliotecário | Biblioteca Municipal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/admin.js" defer></script>
+</head>
+<body class="admin-body">
+  <header class="site-header">
+    <div class="container nav-wrap admin-nav-wrap">
+      <a class="brand" href="index.html" aria-label="Voltar à Biblioteca Municipal Digital">
+        <span class="brand-mark" aria-hidden="true">B</span>
+        <span><strong>Biblioteca Municipal</strong><small>Área do Bibliotecário</small></span>
+      </a>
+      <a class="admin-exit" href="index.html">← Voltar ao site</a>
+    </div>
+  </header>
+
+  <main class="container admin-main">
+    <section class="admin-welcome">
+      <div>
+        <span class="eyebrow"><span class="eyebrow-dot"></span>GESTÃO DO ACERVO</span>
+        <h1>Painel do Bibliotecário</h1>
+        <p>Gerencie o catálogo, acompanhe solicitações e registre devoluções.</p>
+      </div>
+      <span class="demo-label"><span></span> Ambiente demonstrativo</span>
+    </section>
+
+    <div class="admin-warning" role="note">
+      <strong>Protótipo frontend:</strong> os dados ficam somente neste navegador, usando armazenamento local.
+      Não há login, servidor ou banco de dados. Não utilize dados pessoais reais.
+    </div>
+
+    <section class="admin-stats" aria-label="Resumo da biblioteca">
+      <article class="admin-stat"><span class="stat-icon">▤</span><div><small>Livros cadastrados</small><strong id="statBooks">0</strong></div></article>
+      <article class="admin-stat"><span class="stat-icon">◷</span><div><small>Solicitações pendentes</small><strong id="statPending">0</strong></div></article>
+      <article class="admin-stat"><span class="stat-icon">↗</span><div><small>Empréstimos ativos</small><strong id="statActive">0</strong></div></article>
+      <article class="admin-stat"><span class="stat-icon">✓</span><div><small>Devoluções registradas</small><strong id="statReturned">0</strong></div></article>
+    </section>
+
+    <section class="admin-workspace">
+      <aside class="admin-sidebar" aria-label="Menu administrativo">
+        <p class="sidebar-label">GERENCIAMENTO</p>
+        <button class="admin-tab active" data-view="overview"><span>▦</span> Visão geral</button>
+        <button class="admin-tab" data-view="books"><span>▤</span> Gerenciar acervo</button>
+        <button class="admin-tab" data-view="requests"><span>◷</span> Solicitações</button>
+        <button class="admin-tab" data-view="returns"><span>✓</span> Devoluções</button>
+      </aside>
+
+      <div class="admin-content">
+        <section class="admin-view" id="view-overview">
+          <div class="admin-section-heading">
+            <div><h2>Visão geral</h2><p>Acompanhe as atividades da biblioteca.</p></div>
+          </div>
+          <div class="overview-grid">
+            <article class="overview-card">
+              <span class="overview-icon">▤</span><h3>Acervo</h3>
+              <p>Cadastre novas obras e atualize informações dos livros existentes.</p>
+              <button class="button button-primary" data-go="books">Gerenciar livros</button>
+            </article>
+            <article class="overview-card">
+              <span class="overview-icon">◷</span><h3>Solicitações</h3>
+              <p>Analise os pedidos de empréstimo enviados pelos leitores.</p>
+              <button class="button button-primary" data-go="requests">Ver solicitações</button>
+            </article>
+            <article class="overview-card">
+              <span class="overview-icon">✓</span><h3>Devoluções</h3>
+              <p>Consulte empréstimos ativos e registre a devolução dos exemplares.</p>
+              <button class="button button-primary" data-go="returns">Registrar devolução</button>
+            </article>
+          </div>
+          <div class="admin-note">
+            <strong>Como avaliar:</strong> cadastre um livro de teste, consulte as solicitações de exemplo
+            e experimente aprovar um pedido. As alterações permanecem neste navegador até limpar os dados
+            demonstrativos.
+          </div>
+        </section>
+
+        <section class="admin-view hidden" id="view-books">
+          <div class="admin-section-heading">
+            <div><h2>Gerenciar acervo</h2><p>Cadastre, edite ou remova livros do catálogo demonstrativo.</p></div>
+            <button class="button button-primary" id="showBookForm">+ Cadastrar livro</button>
+          </div>
+
+          <form class="admin-form hidden" id="bookForm">
+            <div class="form-heading"><h3 id="bookFormTitle">Novo livro</h3><button type="button" class="text-button" id="cancelBookForm">Cancelar</button></div>
+            <input type="hidden" id="editBookId">
+            <div class="form-grid">
+              <label>Título do livro<input id="bookTitle" required maxlength="100" placeholder="Ex.: A cidade e as estrelas"></label>
+              <label>Autor<input id="bookAuthor" required maxlength="100" placeholder="Nome do autor"></label>
+              <label>Categoria<input id="bookCategory" required maxlength="60" placeholder="Ex.: Ficção"></label>
+              <label>Ano de publicação<input id="bookYear" type="number" min="1000" max="2100" required placeholder="2025"></label>
+              <label>Tipo de acervo<select id="bookType"><option value="physical">Acervo físico</option><option value="digital">Leitura digital</option></select></label>
+              <label>Disponibilidade<select id="bookAvailability"><option value="available">Disponível</option><option value="unavailable">Indisponível</option></select></label>
+            </div>
+            <label class="full-label">Descrição<textarea id="bookDescription" rows="3" maxlength="300" placeholder="Breve descrição da obra"></textarea></label>
+            <div class="form-actions"><button class="button button-primary" type="submit">Salvar livro</button></div>
+          </form>
+
+          <div class="table-toolbar"><label class="admin-search">⌕ <input id="bookSearch" type="search" placeholder="Buscar título ou autor..."></label><span id="bookCount" class="muted-small"></span></div>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Livro</th><th>Categoria</th><th>Tipo</th><th>Situação</th><th>Ações</th></tr></thead>
+              <tbody id="booksTable"></tbody>
+            </table>
+          </div>
+          <p class="empty-message hidden" id="booksEmpty">Nenhum livro encontrado.</p>
+        </section>
+
+        <section class="admin-view hidden" id="view-requests">
+          <div class="admin-section-heading"><div><h2>Solicitações de empréstimo</h2><p>Analise os pedidos recebidos dos leitores.</p></div></div>
+          <div class="filter-row"><label for="requestFilter">Exibir:</label><select id="requestFilter"><option value="all">Todas</option><option value="pending">Pendentes</option><option value="approved">Aprovadas</option><option value="rejected">Recusadas</option></select></div>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Leitor</th><th>Livro</th><th>Data do pedido</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="requestsTable"></tbody>
+            </table>
+          </div>
+          <p class="empty-message hidden" id="requestsEmpty">Nenhuma solicitação nesta categoria.</p>
+        </section>
+
+        <section class="admin-view hidden" id="view-returns">
+          <div class="admin-section-heading"><div><h2>Devoluções</h2><p>Consulte empréstimos aprovados e registre o retorno do exemplar.</p></div></div>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Leitor</th><th>Livro</th><th>Data de retirada</th><th>Situação</th><th>Ação</th></tr></thead>
+              <tbody id="returnsTable"></tbody>
+            </table>
+          </div>
+          <p class="empty-message hidden" id="returnsEmpty">Não há empréstimos ativos para devolver.</p>
+          <div class="returned-history">
+            <h3>Últimas devoluções</h3>
+            <div id="returnedList"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <div class="admin-bottom-actions">
+      <button class="text-button danger-text" id="resetDemo">Restaurar dados demonstrativos</button>
+      <span>Biblioteca Municipal Digital · Protótipo acadêmico</span>
+    </div>
+  </main>
+
+  <div class="toast hidden" id="adminToast" role="status" aria-live="polite"></div>
+</body>
+</html>

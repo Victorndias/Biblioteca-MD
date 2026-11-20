@@ -279,8 +279,33 @@ function setupReaderPage() {
   headingElement.textContent = book.contentHeading || book.title;
 
   if (book.digitalAvailable) {
-    contentElement.innerHTML = book.content.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('');
-  } else {
+
+  if (book.pdfUrl) {
+
+  contentElement.innerHTML = `
+    <div class="pdf-container">
+      <iframe
+        class="pdf-viewer"
+        src="${escapeHtml(book.pdfUrl)}"
+        title="Leitura em PDF: ${escapeHtml(book.title)}">
+      </iframe>
+
+      <img
+        class="pdf-watermark"
+        src="img/bibliotecaa.png"
+        alt=""
+        aria-hidden="true">
+    </div>
+  `;
+
+} else {
+
+    contentElement.innerHTML = book.content
+      .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+      .join('');
+
+  }
+} else {
     notice.classList.add('hidden');
     shell.innerHTML = `
       <div class="reader-unavailable">
