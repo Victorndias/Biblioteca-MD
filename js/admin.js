@@ -1,105 +1,261 @@
-/* Área do Bibliotecário - protótipo frontend.
-   Os dados são fictícios e ficam no localStorage deste navegador. */
+
 (() => {
-  const STORAGE_KEY = 'bmd_admin_demo_v1';
+  const API_URL = 'http://localhost:8080/api/books';
+  const API_LOANS_URL = 'http://localhost:8080/api/loans';
 
-  const initialData = {
-    books: [
-      { id: 'pequeno-principe', title: 'O Pequeno Príncipe', author: 'Antoine de Saint-Exupéry', category: 'Ficção', year: 1943, type: 'physical', available: true, description: 'Uma narrativa sobre amizade e responsabilidade.' },
-      { id: 'aventuras-escola', title: 'Aventuras para ler na escola', author: 'Coleção demonstrativa', category: 'Infantojuvenil', year: 2024, type: 'physical', available: true, description: 'Livro demonstrativo para o catálogo.' },
-      { id: 'dom-casmurro', title: 'Dom Casmurro', author: 'Machado de Assis', category: 'Romance', year: 1899, type: 'digital', available: true, description: 'Romance narrado por Bentinho.' },
-      { id: 'poesia-brasileira', title: 'Poesia brasileira', author: 'Antologia demonstrativa', category: 'Poesia', year: 2023, type: 'physical', available: false, description: 'Antologia demonstrativa.' }
-    ],
-    requests: [
-      { id: 'REQ-001', reader: 'Leitor demonstrativo 01', phone: '(00) 00000-0000', bookId: 'pequeno-principe', date: '2026-11-17', status: 'pending' },
-      { id: 'REQ-002', reader: 'Leitor demonstrativo 02', phone: '(00) 00000-0000', bookId: 'aventuras-escola', date: '2026-11-16', status: 'approved', pickupDate: '2026-11-18' },
-      { id: 'REQ-003', reader: 'Leitor demonstrativo 03', phone: '(00) 00000-0000', bookId: 'poesia-brasileira', date: '2026-11-15', status: 'rejected' }
-    ],
-    returned: []
-  };
+  let books = [];
+  let requests = [];
 
-  const clone = (value) => JSON.parse(JSON.stringify(value));
-  function loadData() {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : clone(initialData);
-    } catch {
-      return clone(initialData);
-    }
-  }
-  let data = loadData();
-  const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   const $ = (id) => document.getElementById(id);
+
   const safe = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
   })[c]);
-  const bookById = (id) => data.books.find((book) => book.id === id);
-  const bookName = (id) => bookById(id)?.title || 'Livro não encontrado';
-  const dateBR = (date) => date ? new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR') : '—';
-  const statusText = { pending: 'Pendente', approved: 'Aprovada', rejected: 'Recusada', returned: 'Devolvido' };
 
   function toast(message) {
     const element = $('adminToast');
     element.textContent = message;
     element.classList.remove('hidden');
+
     clearTimeout(toast.timer);
-    toast.timer = setTimeout(() => element.classList.add('hidden'), 2800);
+    toast.timer = setTimeout(() => {
+      element.classList.add('hidden');
+    }, 2800);
   }
 
+  async function apiRequest(url, options = {}) {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || `Erro HTTP ${response.status}`);
+    }
+
+    if (response.status === 204) return null;
+
+    return response.json();
+  }
+
+  async function loadAll() {
+    const [bookData, loanData] = await Promise.all([
+      apiRequest(API_URL),
+      apiRequest(API_LOANS_URL)
+    ]);
+
+    books = bookData;
+    requests = loanData.map(request => ({
+      ...request,
+      status: String(request.status || '').toLowerCase()
+    }));
+
+    renderAll();
+  }
+
+  function bookById(id) {
+    return books.find(book => String(book.id) === String(id));
+  }
+
+  function bookName(id) {
+    return bookById(id)?.title || 'Livro não encontrado';
+  }
+
+  function dateBR(value) {
+    if (!value) return '—';
+
+    const date = String(value).slice(0, 10);
+    const [year, month, day] = date.split('-');
+
+    if (!year || !month || !day) return '—';
+
+    return `${day}/${month}/${year}`;
+  }
+
+  const statusText = {
+    pending: 'Pendente',
+    approved: 'Aprovada',
+    rejected: 'Recusada',
+    returned: 'Devolvido'
+  };
+
   function showView(view) {
-    document.querySelectorAll('.admin-view').forEach((section) => section.classList.toggle('hidden', section.id !== `view-${view}`));
-    document.querySelectorAll('.admin-tab').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
+    document.querySelectorAll('.admin-view').forEach(section => {
+      section.classList.toggle('hidden', section.id !== `view-${view}`);
+    });
+
+    document.querySelectorAll('.admin-tab').forEach(button => {
+      button.classList.toggle('active', button.dataset.view === view);
+    });
   }
 
   function renderStats() {
-    $('statBooks').textContent = data.books.length;
-    $('statPending').textContent = data.requests.filter((item) => item.status === 'pending').length;
-    $('statActive').textContent = data.requests.filter((item) => item.status === 'approved').length;
-    $('statReturned').textContent = data.returned.length;
+    $('statBooks').textContent = books.length;
+
+    $('statPending').textContent =
+      requests.filter(item => item.status === 'pending').length;
+
+    $('statActive').textContent =
+      requests.filter(item => item.status === 'approved').length;
+
+    $('statReturned').textContent =
+      requests.filter(item => item.status === 'returned').length;
   }
 
   function renderBooks() {
     const query = $('bookSearch').value.trim().toLocaleLowerCase('pt-BR');
-    const filtered = data.books.filter((book) => `${book.title} ${book.author}`.toLocaleLowerCase('pt-BR').includes(query));
-    $('bookCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'livro' : 'livros'}`;
+
+    const filtered = books.filter(book =>
+      `${book.title} ${book.author}`
+        .toLocaleLowerCase('pt-BR')
+        .includes(query)
+    );
+
+    $('bookCount').textContent =
+      `${filtered.length} ${filtered.length === 1 ? 'livro' : 'livros'}`;
+
     $('booksEmpty').classList.toggle('hidden', filtered.length > 0);
-    $('booksTable').innerHTML = filtered.map((book) => `
-      <tr>
-        <td>${safe(book.title)}<br><span class="muted-small">${safe(book.author)} · ${safe(book.year)}</span></td>
-        <td>${safe(book.category)}</td>
-        <td>${book.type === 'digital' ? 'Digital' : 'Físico'}</td>
-        <td><span class="status-tag ${book.available ? 'approved' : 'rejected'}">${book.available ? 'Disponível' : 'Indisponível'}</span></td>
-        <td><div class="table-actions"><button data-edit-book="${safe(book.id)}">Editar</button><button class="delete-action" data-delete-book="${safe(book.id)}">Excluir</button></div></td>
-      </tr>`).join('');
+
+    $('booksTable').innerHTML = filtered.map(book => {
+      const type = book.type ||
+        (book.digitalAvailable ? 'digital' : 'physical');
+
+      const available = type === 'digital'
+        ? book.digitalAvailable
+        : book.physicalLoanAvailable;
+
+      return `
+        <tr>
+          <td>
+            ${safe(book.title)}
+            <br>
+            <span class="muted-small">
+              ${safe(book.author)} · ${safe(book.year)}
+            </span>
+          </td>
+
+          <td>${safe(book.category)}</td>
+
+          <td>${type === 'digital' ? 'Digital' : 'Físico'}</td>
+
+          <td>
+            <span class="status-tag ${available ? 'approved' : 'rejected'}">
+              ${available ? 'Disponível' : 'Indisponível'}
+            </span>
+          </td>
+
+          <td>
+            <div class="table-actions">
+              <button data-edit-book="${book.id}">Editar</button>
+              <button class="delete-action" data-delete-book="${book.id}">
+                Excluir
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
 
   function renderRequests() {
     const filter = $('requestFilter').value;
-    const list = data.requests.filter((request) => filter === 'all' || request.status === filter);
+
+    const list = requests.filter(request =>
+      filter === 'all' || request.status === filter
+    );
+
     $('requestsEmpty').classList.toggle('hidden', list.length > 0);
-    $('requestsTable').innerHTML = list.map((request) => `
-      <tr>
-        <td>${safe(request.reader)}<br><span class="muted-small">${safe(request.phone)}</span></td>
-        <td>${safe(bookName(request.bookId))}</td>
-        <td>${dateBR(request.date)}</td>
-        <td><span class="status-tag ${request.status}">${statusText[request.status]}</span></td>
-        <td>${request.status === 'pending' ? `<div class="table-actions"><button data-approve="${safe(request.id)}">Aprovar</button><button class="delete-action" data-reject="${safe(request.id)}">Recusar</button></div>` : '—'}</td>
-      </tr>`).join('');
+
+    $('requestsTable').innerHTML = list.map(request => {
+      let actions = '—';
+
+      if (request.status === 'pending') {
+        actions = `
+          <div class="table-actions">
+            <button data-approve-loan="${request.id}">Aprovar</button>
+            <button class="delete-action" data-reject-loan="${request.id}">
+              Recusar
+            </button>
+          </div>
+        `;
+      }
+
+      return `
+        <tr>
+          <td>
+            ${safe(request.readerName)}
+            <br>
+            <span class="muted-small">${safe(request.phone)}</span>
+            ${request.email ? `<br><span class="muted-small">${safe(request.email)}</span>` : ''}
+          </td>
+
+          <td>${safe(bookName(request.bookId))}</td>
+
+          <td>${dateBR(request.requestedAt)}</td>
+
+          <td>
+            <span class="status-tag ${safe(request.status)}">
+              ${statusText[request.status] || safe(request.status)}
+            </span>
+          </td>
+
+          <td>${actions}</td>
+        </tr>
+      `;
+    }).join('');
   }
 
   function renderReturns() {
-    const active = data.requests.filter((request) => request.status === 'approved');
+    const active = requests.filter(request =>
+      request.status === 'approved'
+    );
+
     $('returnsEmpty').classList.toggle('hidden', active.length > 0);
-    $('returnsTable').innerHTML = active.map((request) => `
+
+    $('returnsTable').innerHTML = active.map(request => `
       <tr>
-        <td>${safe(request.reader)}</td><td>${safe(bookName(request.bookId))}</td>
+        <td>${safe(request.readerName)}</td>
+
+        <td>${safe(bookName(request.bookId))}</td>
+
         <td>${dateBR(request.pickupDate)}</td>
-        <td><span class="status-tag approved">Em empréstimo</span></td>
-        <td><button class="text-button" data-return="${safe(request.id)}">Registrar devolução</button></td>
-      </tr>`).join('');
-    $('returnedList').innerHTML = data.returned.length
-      ? data.returned.slice().reverse().slice(0, 6).map((item) => `<div class="returned-item"><span>${safe(item.bookTitle)} — ${safe(item.reader)}</span><strong>${dateBR(item.returnDate)}</strong></div>`).join('')
-      : '<p class="muted-small">Nenhuma devolução registrada neste protótipo.</p>';
+
+        <td>
+          <span class="status-tag approved">Em empréstimo</span>
+        </td>
+
+        <td>
+          <button data-return-loan="${request.id}">
+            Registrar devolução
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    const returned = requests
+      .filter(request => request.status === 'returned')
+      .sort((a, b) =>
+        String(b.returnDate || '').localeCompare(String(a.returnDate || ''))
+      );
+
+    $('returnedList').innerHTML = returned.length
+      ? returned.slice(0, 6).map(item => `
+          <div class="returned-item">
+            <span>
+              ${safe(bookName(item.bookId))} — ${safe(item.readerName)}
+            </span>
+            <strong>${dateBR(item.returnDate)}</strong>
+          </div>
+        `).join('')
+      : '<p class="muted-small">Nenhuma devolução registrada.</p>';
   }
 
   function renderAll() {
@@ -107,6 +263,29 @@
     renderBooks();
     renderRequests();
     renderReturns();
+  }
+
+  async function updateLoanStatus(id, status) {
+    try {
+      await apiRequest(`${API_LOANS_URL}/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+
+      await loadAll();
+
+      const messages = {
+        APPROVED: 'Empréstimo aprovado!',
+        REJECTED: 'Solicitação recusada.',
+        RETURNED: 'Devolução registrada com sucesso!'
+      };
+
+      toast(messages[status]);
+
+    } catch (error) {
+      console.error('Erro ao atualizar empréstimo:', error);
+      toast(error.message || 'Não foi possível atualizar a solicitação.');
+    }
   }
 
   function resetBookForm() {
@@ -119,108 +298,188 @@
 
   function editBook(id) {
     const book = bookById(id);
+
     if (!book) return;
+
+    const type = book.type ||
+      (book.digitalAvailable ? 'digital' : 'physical');
+
+    const available = type === 'digital'
+      ? book.digitalAvailable
+      : book.physicalLoanAvailable;
+
     $('editBookId').value = book.id;
-    $('bookTitle').value = book.title;
-    $('bookAuthor').value = book.author;
-    $('bookCategory').value = book.category;
-    $('bookYear').value = book.year;
-    $('bookType').value = book.type;
-    $('bookAvailability').value = book.available ? 'available' : 'unavailable';
+    $('bookTitle').value = book.title || '';
+    $('bookAuthor').value = book.author || '';
+    $('bookCategory').value = book.category || '';
+    $('bookYear').value = book.year || '';
+    $('bookType').value = type;
+    $('bookAvailability').value = available ? 'available' : 'unavailable';
     $('bookDescription').value = book.description || '';
+    $('bookPdfUrl').value = book.pdfUrl || '';
+
     $('bookFormTitle').textContent = 'Editar livro';
     $('bookForm').classList.remove('hidden');
-    $('bookForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    $('bookForm').scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
   }
 
-  document.querySelectorAll('.admin-tab').forEach((button) => button.addEventListener('click', () => showView(button.dataset.view)));
-  document.querySelectorAll('[data-go]').forEach((button) => button.addEventListener('click', () => showView(button.dataset.go)));
+  // Navegação
+  document.querySelectorAll('.admin-tab').forEach(button => {
+    button.addEventListener('click', () => showView(button.dataset.view));
+  });
+
+  document.querySelectorAll('[data-go]').forEach(button => {
+    button.addEventListener('click', () => showView(button.dataset.go));
+  });
+
+  // Formulário de livros
   $('showBookForm').addEventListener('click', () => {
     resetBookForm();
+
     $('bookForm').classList.remove('hidden');
-    $('bookForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    $('bookForm').scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+
     $('bookTitle').focus();
   });
+
   $('cancelBookForm').addEventListener('click', resetBookForm);
+
   $('bookSearch').addEventListener('input', renderBooks);
+
   $('requestFilter').addEventListener('change', renderRequests);
 
-  $('bookForm').addEventListener('submit', (event) => {
+  // Cadastro e edição de livros
+  $('bookForm').addEventListener('submit', async event => {
     event.preventDefault();
-    const id = $('editBookId').value || `livro-${Date.now()}`;
-    const existing = bookById(id);
+
+    const id = $('editBookId').value;
+    const type = $('bookType').value;
+    const available = $('bookAvailability').value === 'available';
+
     const book = {
-      id,
       title: $('bookTitle').value.trim(),
       author: $('bookAuthor').value.trim(),
       category: $('bookCategory').value.trim(),
       year: Number($('bookYear').value),
-      type: $('bookType').value,
-      available: $('bookAvailability').value === 'available',
-      description: $('bookDescription').value.trim()
+      type: type,
+      description: $('bookDescription').value.trim(),
+      digitalAvailable: type === 'digital' && available,
+      physicalLoanAvailable: type === 'physical' && available,
+      pdfUrl: $('bookPdfUrl').value.trim()
     };
-    if (existing) Object.assign(existing, book);
-    else data.books.push(book);
-    save();
-    resetBookForm();
-    renderAll();
-    toast(existing ? 'Livro atualizado no protótipo.' : 'Livro cadastrado no protótipo.');
+
+    try {
+      if (id) {
+        await apiRequest(`${API_URL}/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(book)
+        });
+
+        toast('Livro atualizado com sucesso!');
+      } else {
+        await apiRequest(API_URL, {
+          method: 'POST',
+          body: JSON.stringify(book)
+        });
+
+        toast('Livro cadastrado com sucesso!');
+      }
+
+      resetBookForm();
+      await loadAll();
+
+    } catch (error) {
+      console.error(error);
+      toast('Erro ao salvar livro. Verifique o backend.');
+    }
   });
 
-  $('booksTable').addEventListener('click', (event) => {
+  // Edição e exclusão de livros
+  $('booksTable').addEventListener('click', async event => {
     const editButton = event.target.closest('[data-edit-book]');
     const deleteButton = event.target.closest('[data-delete-book]');
-    if (editButton) editBook(editButton.dataset.editBook);
+
+    if (editButton) {
+      editBook(editButton.dataset.editBook);
+    }
+
     if (deleteButton) {
       const id = deleteButton.dataset.deleteBook;
-      if (!confirm('Deseja excluir este livro dos dados demonstrativos?')) return;
-      data.books = data.books.filter((book) => book.id !== id);
-      save(); renderAll(); toast('Livro removido do protótipo.');
-    }
-  });
 
-  $('requestsTable').addEventListener('click', (event) => {
-    const approve = event.target.closest('[data-approve]');
-    const reject = event.target.closest('[data-reject]');
-    if (approve) {
-      const request = data.requests.find((item) => item.id === approve.dataset.approve);
-      if (request) {
-        request.status = 'approved';
-        request.pickupDate = new Date().toISOString().slice(0, 10);
-        save(); renderAll(); toast('Solicitação aprovada no protótipo.');
+      if (!confirm('Deseja realmente excluir este livro do banco de dados?')) {
+        return;
       }
-    }
-    if (reject) {
-      const request = data.requests.find((item) => item.id === reject.dataset.reject);
-      if (request && confirm('Deseja recusar esta solicitação demonstrativa?')) {
-        request.status = 'rejected';
-        save(); renderAll(); toast('Solicitação recusada no protótipo.');
+
+      try {
+        await apiRequest(`${API_URL}/${id}`, {
+          method: 'DELETE'
+        });
+
+        await loadAll();
+        toast('Livro excluído com sucesso!');
+
+      } catch (error) {
+        console.error(error);
+        toast('Erro ao excluir livro.');
       }
     }
   });
 
-  $('returnsTable').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-return]');
-    if (!button) return;
-    const index = data.requests.findIndex((item) => item.id === button.dataset.return);
-    if (index < 0) return;
-    const [request] = data.requests.splice(index, 1);
-    data.returned.push({
-      id: request.id,
-      reader: request.reader,
-      bookTitle: bookName(request.bookId),
-      returnDate: new Date().toISOString().slice(0, 10)
-    });
-    save(); renderAll(); toast('Devolução registrada no protótipo.');
+  // Aprovar ou recusar solicitações
+  $('requestsTable').addEventListener('click', async event => {
+    const approveButton = event.target.closest('[data-approve-loan]');
+    const rejectButton = event.target.closest('[data-reject-loan]');
+
+    if (approveButton) {
+      await updateLoanStatus(
+        approveButton.dataset.approveLoan,
+        'APPROVED'
+      );
+    }
+
+    if (rejectButton) {
+      if (!confirm('Deseja realmente recusar esta solicitação?')) return;
+
+      await updateLoanStatus(
+        rejectButton.dataset.rejectLoan,
+        'REJECTED'
+      );
+    }
   });
 
-  $('resetDemo').addEventListener('click', () => {
-    if (!confirm('Restaurar os livros e as solicitações demonstrativas? Suas alterações locais serão perdidas.')) return;
-    data = clone(initialData);
-    save(); resetBookForm(); renderAll(); showView('overview');
-    toast('Dados demonstrativos restaurados.');
+  // Registrar devolução
+  $('returnsTable').addEventListener('click', async event => {
+    const returnButton = event.target.closest('[data-return-loan]');
+
+    if (!returnButton) return;
+
+    if (!confirm('Confirmar a devolução deste livro?')) return;
+
+    await updateLoanStatus(
+      returnButton.dataset.returnLoan,
+      'RETURNED'
+    );
   });
 
-  if (!localStorage.getItem(STORAGE_KEY)) save();
-  renderAll();
+  // Remove botão de demonstração, se ainda existir
+  const resetDemoButton = $('resetDemo');
+
+  if (resetDemoButton) {
+    resetDemoButton.remove();
+  }
+
+  // Inicialização
+  loadAll().catch(error => {
+    console.error('Erro ao carregar dados:', error);
+    toast('Não foi possível carregar os dados. Verifique o backend.');
+  });
+
 })();
