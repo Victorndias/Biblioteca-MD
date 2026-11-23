@@ -1,7 +1,7 @@
 
 let books = [];
 
-const API_URL = 'http://localhost:8080/api/books';
+const API_URL = 'https://biblioteca-md.onrender.com/api/books';
 
 async function loadBooks() {
   try {
@@ -302,7 +302,7 @@ async function setupLoanRequestPage() {
   const form = document.getElementById('loanRequestForm');
   if (!form) return;
 
-  const API_LOANS_URL = 'http://localhost:8080/api/loans';
+  const API_LOANS_URL = 'https://biblioteca-md.onrender.com/api/loans';
 
   const params = new URLSearchParams(window.location.search);
   const bookId = params.get('livro');

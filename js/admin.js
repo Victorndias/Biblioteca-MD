@@ -1,7 +1,7 @@
 
 (() => {
-  const API_URL = 'http://localhost:8080/api/books';
-  const API_LOANS_URL = 'http://localhost:8080/api/loans';
+  const API_URL = 'https://biblioteca-md.onrender.com/api/books';
+  const API_LOANS_URL = 'https://biblioteca-md.onrender.com/api/loans';
 
   let books = [];
   let requests = [];
